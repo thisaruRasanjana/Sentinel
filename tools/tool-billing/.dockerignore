@@ -1,0 +1,9 @@
+# Ballerina build artifacts
+target/
+Dependencies.toml
+.ballerina/
+
+# OS
+.DS_Store
+*.swp
+*.swo

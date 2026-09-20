@@ -1,0 +1,24 @@
+services:
+  gateway:
+    build:
+      context: ../../gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - BAL_CONFIG_VAR_billingUrl=http://tool-billing:7001
+      - BAL_CONFIG_VAR_inventoryUrl=http://tool-inventory:7002
+    depends_on:
+      - tool-billing
+      - tool-inventory
+
+  tool-billing:
+    build:
+      context: ../../tools/tool-billing
+    ports:
+      - "7001:7001"
+
+  tool-inventory:
+    build:
+      context: ../../tools/tool-inventory
+    ports:
+      - "7002:7002"

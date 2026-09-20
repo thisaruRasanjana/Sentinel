@@ -1,0 +1,15 @@
+# Ballerina build artifacts
+target/
+Dependencies.toml
+
+# Ballerina module cache
+.ballerina/
+
+# OS
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/

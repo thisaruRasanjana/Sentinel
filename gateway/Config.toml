@@ -1,3 +1,4 @@
 billingUrl = "http://localhost:7001"
 inventoryUrl = "http://localhost:7002"
 gatewayPort = 8080
+certFile = "../token-issuer/resources/public.crt"

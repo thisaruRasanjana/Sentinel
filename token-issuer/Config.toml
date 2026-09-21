@@ -1,0 +1,5 @@
+keystorePath = "./resources/keystore.p12"
+keystorePassword = "ballerina"
+keyAlias = "sentinel"
+keyPassword = "ballerina"
+tokenTtlSeconds = 3600

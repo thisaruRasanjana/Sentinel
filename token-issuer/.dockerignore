@@ -1,0 +1,4 @@
+target/
+.ballerina/
+*.swp
+.DS_Store

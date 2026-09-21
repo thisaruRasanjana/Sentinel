@@ -13,3 +13,9 @@ Dependencies.toml
 # IDE
 .idea/
 .vscode/
+
+# Cryptographic keys and keystores — never commit private key material
+*.key
+*.p12
+*.pem
+*.pfx

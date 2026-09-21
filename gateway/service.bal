@@ -3,10 +3,12 @@ import ballerina/uuid;
 
 configurable string billingUrl = "http://tool-billing:7001";
 configurable string inventoryUrl = "http://tool-inventory:7002";
+configurable string policyUrl = "http://policy-engine:9001";
 configurable int gatewayPort = 8080;
 
 final http:Client billingClient = check new (billingUrl);
 final http:Client inventoryClient = check new (inventoryUrl);
+final PolicyServiceClient policyClient = check new (policyUrl);
 
 service / on new http:Listener(gatewayPort) {
 
@@ -50,8 +52,23 @@ service / on new http:Listener(gatewayPort) {
             return createErrorResponse(403, "FORBIDDEN", "Insufficient scopes. Required: " + requiredScope);
         }
 
+        // --- POLICY CHECK ---
+        // TODO: Phase 4 — Pass actual tool cost instead of 1
+        CheckRequest policyReq = {agent_id: identity.agent_id, tool_id: toolId, cost: 1};
+        CheckResponse|error policyRes = policyClient->Check(policyReq);
+
+        if policyRes is error {
+            // Fail closed: if policy engine is down, gateway stops serving requests.
+            return createErrorResponse(503, "SERVICE_UNAVAILABLE", "Policy engine unreachable");
+        } else {
+            if !policyRes.allowed {
+                http:Response res = createErrorResponse(429, "QUOTA_EXCEEDED", "Agent quota exhausted for tool " + toolId, policyRes.retry_after_ms);
+                return res;
+            }
+        }
+
         // --- ROUTING ---
-        // TODO: Phase 3 — Forward identity headers (X-Agent-Id, X-Principal) to tool services.
+        // TODO: Phase 4 — Forward identity headers (X-Agent-Id, X-Principal) to tool services.
         http:Response|error result;
 
         if toolId == "invoice.create" {
@@ -83,7 +100,7 @@ service / on new http:Listener(gatewayPort) {
     }
 }
 
-isolated function createErrorResponse(int statusCode, string code, string message) returns http:Response {
+isolated function createErrorResponse(int statusCode, string code, string message, int? retryAfterMs = null) returns http:Response {
     http:Response res = new;
     res.statusCode = statusCode;
     ErrorResponse err = {
@@ -91,7 +108,7 @@ isolated function createErrorResponse(int statusCode, string code, string messag
             code: code,
             message: message,
             trace_id: uuid:createType1AsString(),
-            retry_after_ms: null
+            retry_after_ms: retryAfterMs
         }
     };
     res.setJsonPayload(err.toJson());

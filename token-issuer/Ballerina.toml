@@ -1,5 +1,5 @@
 [package]
 org = "sentinel"
-name = "gateway"
+name = "token_issuer"
 version = "0.1.0"
 

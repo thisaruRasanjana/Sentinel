@@ -8,3 +8,9 @@ public type ErrorDetail record {|
 public type ErrorResponse record {|
     ErrorDetail 'error;
 |};
+
+public type AgentIdentity record {|
+    string agent_id;
+    string principal;
+    string[] scopes;
+|};

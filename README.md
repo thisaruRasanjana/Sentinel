@@ -56,15 +56,22 @@ docker compose up --build
 
 ### Smoke Tests
 
-Health check:
+1. Start all services using Docker Compose or locally.
+
+2. Get a JWT token for an agent:
 ```bash
-curl http://localhost:8080/health
+TOKEN=$(curl -s -X POST http://localhost:9000/tokens \
+  -H "Content-Type: application/json" \
+  -d '{"agent_id": "agent:invoice-assistant", "principal": "user:thisaru", "scopes": ["billing:write", "inventory:read"]}' \
+  | jq -r '.token')
+echo $TOKEN
 ```
 
-Create an invoice via the gateway:
+3. Call the gateway with the token:
 ```bash
 curl -X POST http://localhost:8080/tools/invoice.create \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{"customer": "acme-corp", "amount": 1500.00, "currency": "USD"}'
 ```
 
@@ -72,6 +79,7 @@ Check inventory via the gateway:
 ```bash
 curl -X POST http://localhost:8080/tools/inventory.check \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{"sku": "WIDGET-001"}'
 ```
 
@@ -83,7 +91,7 @@ Sentinel is currently under active development. Below is the roadmap of core gov
 |---|---|---|
 | **API Gateway & Tool Dispatch** | Available | Abstract agent tool routing with standardized error envelopes |
 | **Tool Backends** | Available | Sample billing and inventory microservices |
-| **Agent Identity & Auth** | In Progress | JWT verification, agent API key validation, and RBAC |
+| **Agent Identity & Auth** | Available | JWT verification, agent API key validation, and RBAC |
 | **Policy Engine & Rate Limiter** | Planned | In-memory sharded token bucket with distributed quota tracking |
 | **Tool Registry** | Planned | Dynamic tool discovery, method mapping, and schema validation |
 | **Audit Pipeline** | Planned | Tamper-evident logging of all LLM/agent invocations |

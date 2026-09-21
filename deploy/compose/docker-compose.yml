@@ -7,9 +7,12 @@ services:
     environment:
       - BAL_CONFIG_VAR_billingUrl=http://tool-billing:7001
       - BAL_CONFIG_VAR_inventoryUrl=http://tool-inventory:7002
+      - BAL_CONFIG_VAR_certFile=/home/ballerina/token-issuer/resources/public.crt
     depends_on:
       - tool-billing
       - tool-inventory
+    volumes:
+      - ../../token-issuer/resources:/home/ballerina/token-issuer/resources
 
   tool-billing:
     build:
@@ -22,3 +25,11 @@ services:
       context: ../../tools/tool-inventory
     ports:
       - "7002:7002"
+
+  token-issuer:
+    build:
+      context: ../../token-issuer
+    ports:
+      - "9000:9000"
+    volumes:
+      - ../../token-issuer/resources:/home/ballerina/resources

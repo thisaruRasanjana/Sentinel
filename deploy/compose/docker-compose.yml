@@ -5,12 +5,15 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - BAL_CONFIG_VAR_billingUrl=http://tool-billing:7001
-      - BAL_CONFIG_VAR_inventoryUrl=http://tool-inventory:7002
-      - BAL_CONFIG_VAR_certFile=/home/ballerina/token-issuer/resources/public.crt
+      BAL_CONFIG_DATA: |
+        policyUrl="http://policy-engine:9001"
+        registryUrl="http://registry:9002"
+        certFile="./token-issuer/resources/public.crt"
     depends_on:
       - tool-billing
       - tool-inventory
+      - policy-engine
+      - registry
     volumes:
       - ../../token-issuer/resources:/home/ballerina/token-issuer/resources
 
@@ -33,3 +36,25 @@ services:
       - "9000:9000"
     volumes:
       - ../../token-issuer/resources:/home/ballerina/resources
+
+  policy-engine:
+    build:
+      context: ../../policy-engine
+    ports:
+      - "9001:9001"
+      - "9010:9010"
+    environment:
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      - redis
+
+  registry:
+    build:
+      context: ../../registry
+    ports:
+      - "9002:9002"
+
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"

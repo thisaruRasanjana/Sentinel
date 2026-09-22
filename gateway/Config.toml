@@ -1,4 +1,4 @@
-billingUrl = "http://localhost:7001"
-inventoryUrl = "http://localhost:7002"
+policyUrl = "http://localhost:9001"
+registryUrl = "http://localhost:9002"
 gatewayPort = 8080
 certFile = "../token-issuer/resources/public.crt"

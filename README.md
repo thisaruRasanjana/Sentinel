@@ -92,7 +92,7 @@ Sentinel is currently under active development. Below is the roadmap of core gov
 | **API Gateway & Tool Dispatch** | Available | Abstract agent tool routing with standardized error envelopes |
 | **Tool Backends** | Available | Sample billing and inventory microservices |
 | **Agent Identity & Auth** | Available | JWT verification, agent API key validation, and RBAC |
-| **Policy Engine & Rate Limiter** | Planned | In-memory sharded token bucket with distributed quota tracking |
+| **Policy Engine & Rate Limiter** | Available | In-memory sharded token bucket with distributed quota tracking |
 | **Tool Registry** | Planned | Dynamic tool discovery, method mapping, and schema validation |
 | **Audit Pipeline** | Planned | Tamper-evident logging of all LLM/agent invocations |
 | **Distributed Observability** | Planned | OpenTelemetry tracing and latency metrics across tool hops |

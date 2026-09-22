@@ -1,0 +1,19 @@
+syntax = "proto3";
+package sentinel.policy.v1;
+option go_package = "github.com/thisaruRasanjana/Sentinel/policy-engine/pkg/policyv1";
+
+service PolicyService {
+  rpc Check(CheckRequest) returns (CheckResponse);
+}
+
+message CheckRequest {
+  string agent_id = 1;
+  string tool_id = 2;
+  int32 cost = 3;
+}
+
+message CheckResponse {
+  bool allowed = 1;
+  int32 remaining = 2;
+  int64 retry_after_ms = 3;
+}

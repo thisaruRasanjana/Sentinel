@@ -40,15 +40,6 @@ public isolated function validateToken(string token) returns AgentIdentity|error
     };
 }
 
-public isolated function getRequiredScope(string toolId) returns string? {
-    match toolId {
-        "invoice.create"   => { return "billing:write"; }
-        "invoice.get"      => { return "billing:read"; }
-        "inventory.check"  => { return "inventory:read"; }
-        "inventory.update" => { return "inventory:write"; }
-        _                  => { return null; }
-    }
-}
 
 public isolated function hasScope(AgentIdentity identity, string requiredScope) returns boolean {
     return identity.scopes.some(isolated function(string s) returns boolean {

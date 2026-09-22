@@ -93,3 +93,16 @@ function testValidTokenWrongScope() returns error? {
     json payload = check response.getJsonPayload();
     test:assertEquals(check payload.'error.code, "FORBIDDEN");
 }
+
+@test:Config {}
+function testUnknownTool() returns error? {
+    string token = check generateTestToken("agent:test", ["billing:write"], 3600);
+
+    http:Request req = new;
+    req.setHeader("Authorization", "Bearer " + token);
+
+    http:Response response = check testClient->post("/tools/nonexistent.tool", req);
+    test:assertEquals(response.statusCode, 404);
+    json payload = check response.getJsonPayload();
+    test:assertEquals(check payload.'error.code, "TOOL_NOT_FOUND");
+}

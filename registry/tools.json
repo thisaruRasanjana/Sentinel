@@ -1,0 +1,22 @@
+{
+  "invoice.create": {
+    "upstream_url": "http://tool-billing:7001/invoices",
+    "http_method": "POST",
+    "required_scope": "billing:write"
+  },
+  "invoice.get": {
+    "upstream_url": "http://tool-billing:7001/invoices/",
+    "http_method": "GET",
+    "required_scope": "billing:read"
+  },
+  "inventory.check": {
+    "upstream_url": "http://tool-inventory:7002/inventory/check",
+    "http_method": "POST",
+    "required_scope": "inventory:read"
+  },
+  "inventory.update": {
+    "upstream_url": "http://tool-inventory:7002/inventory/update",
+    "http_method": "POST",
+    "required_scope": "inventory:write"
+  }
+}

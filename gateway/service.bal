@@ -1,18 +1,52 @@
 import ballerina/http;
 import ballerina/uuid;
 
-configurable string billingUrl = "http://tool-billing:7001";
-configurable string inventoryUrl = "http://tool-inventory:7002";
 configurable string policyUrl = "http://policy-engine:9001";
+configurable string registryUrl = "http://registry:9002";
 configurable int gatewayPort = 8080;
 
-final http:Client billingClient = check new (billingUrl);
-final http:Client inventoryClient = check new (inventoryUrl);
 final PolicyServiceClient policyClient = check new (policyUrl);
+final RegistryServiceClient registryClient = check new (registryUrl);
+
+// Cache http clients to upstream destinations
+isolated class ClientCache {
+    private map<http:Client> clients = {};
+
+    isolated function getClient(string url) returns http:Client|error {
+        lock {
+            if self.clients.hasKey(url) {
+                return self.clients.get(url);
+            }
+            http:Client newClient = check new (url);
+            self.clients[url] = newClient;
+            return newClient;
+        }
+    }
+}
+final ClientCache clientCache = new ClientCache();
+
+isolated class ToolCache {
+    private map<ToolMetadata> cache = {};
+
+    isolated function get(string toolId) returns ToolMetadata? {
+        lock {
+            if self.cache.hasKey(toolId) {
+                return self.cache.get(toolId).clone();
+            }
+            return null;
+        }
+    }
+
+    isolated function put(string toolId, ToolMetadata metadata) {
+        lock {
+            self.cache[toolId] = metadata.clone();
+        }
+    }
+}
+final ToolCache toolCache = new ToolCache();
 
 service / on new http:Listener(gatewayPort) {
 
-    // Health check endpoint — intentionally unauthenticated for load balancer probing.
     resource function get health() returns json {
         return {
             "status": "ok",
@@ -20,9 +54,6 @@ service / on new http:Listener(gatewayPort) {
         };
     }
 
-    // Agent-facing tool endpoint.
-    // TODO: Phase 4 — Replace hardcoded tool routing with Registry lookup.
-    // The Registry will supply upstream_url, method, required_scope, and input_schema.
     resource function post tools/[string toolId](http:Request req) returns http:Response {
 
         // --- AUTHENTICATION ---
@@ -42,55 +73,63 @@ service / on new http:Listener(gatewayPort) {
             return createErrorResponse(401, "UNAUTHORIZED", "Invalid or expired token");
         }
 
-        // --- AUTHORIZATION ---
-        string? requiredScope = getRequiredScope(toolId);
-        if requiredScope is null {
-            return createErrorResponse(404, "TOOL_NOT_FOUND", "Unknown tool ID: " + toolId);
+        // --- REGISTRY LOOKUP ---
+        ToolMetadata? cachedMetadata = toolCache.get(toolId);
+        ToolMetadata metadata;
+        
+        if cachedMetadata is null {
+            GetToolRequest registryReq = {tool_id: toolId};
+            GetToolResponse|error registryRes = registryClient->GetTool(registryReq);
+            
+            if registryRes is error {
+                return createErrorResponse(500, "REGISTRY_ERROR", "Failed to contact tool registry");
+            }
+            
+            if !registryRes.found {
+                return createErrorResponse(404, "TOOL_NOT_FOUND", "Unknown tool ID: " + toolId);
+            }
+            
+            ToolMetadata? regMeta = registryRes.metadata;
+            if regMeta is null {
+                return createErrorResponse(500, "REGISTRY_ERROR", "Registry returned found but missing metadata");
+            }
+            metadata = regMeta;
+            toolCache.put(toolId, metadata);
+        } else {
+            metadata = cachedMetadata;
         }
 
-        if !hasScope(identity, requiredScope) {
-            return createErrorResponse(403, "FORBIDDEN", "Insufficient scopes. Required: " + requiredScope);
+        // --- AUTHORIZATION ---
+        if !hasScope(identity, metadata.required_scope) {
+            return createErrorResponse(403, "FORBIDDEN", "Insufficient scopes. Required: " + metadata.required_scope);
         }
 
         // --- POLICY CHECK ---
-        // TODO: Phase 4 — Pass actual tool cost instead of 1
         CheckRequest policyReq = {agent_id: identity.agent_id, tool_id: toolId, cost: 1};
         CheckResponse|error policyRes = policyClient->Check(policyReq);
 
         if policyRes is error {
-            // Fail closed: if policy engine is down, gateway stops serving requests.
             return createErrorResponse(503, "SERVICE_UNAVAILABLE", "Policy engine unreachable");
         } else {
             if !policyRes.allowed {
-                http:Response res = createErrorResponse(429, "QUOTA_EXCEEDED", "Agent quota exhausted for tool " + toolId, policyRes.retry_after_ms);
-                return res;
+                return createErrorResponse(429, "QUOTA_EXCEEDED", "Agent quota exhausted for tool " + toolId, policyRes.retry_after_ms);
             }
         }
 
-        // --- ROUTING ---
-        // TODO: Phase 4 — Forward identity headers (X-Agent-Id, X-Principal) to tool services.
+        // --- DYNAMIC ROUTING ---
+        // Forward Identity Headers
+        req.setHeader("X-Agent-Id", identity.agent_id);
+        req.setHeader("X-Principal", identity.principal);
+        
+        http:Client|error upstreamClient = clientCache.getClient(metadata.upstream_url);
+        if upstreamClient is error {
+            return createErrorResponse(500, "INTERNAL_ERROR", "Failed to initialize upstream client");
+        }
+        
         http:Response|error result;
-
-        if toolId == "invoice.create" {
-            result = billingClient->post("/invoices", req);
-        } else if toolId == "invoice.get" {
-            var reqPayload = req.getJsonPayload();
-            if reqPayload is json {
-                var idResult = reqPayload.id;
-                if idResult is string {
-                    result = billingClient->get("/invoices/" + idResult);
-                } else {
-                    return createErrorResponse(400, "INVALID_REQUEST", "Missing or invalid 'id' parameter");
-                }
-            } else {
-                return createErrorResponse(400, "INVALID_REQUEST", "Invalid JSON payload");
-            }
-        } else if toolId == "inventory.check" {
-            result = inventoryClient->post("/inventory/check", req);
-        } else {
-            // toolId == "inventory.update" — only reachable tool remaining after auth check
-            result = inventoryClient->post("/inventory/update", req);
-        }
+        
+        // Use execute method for dynamic HTTP methods
+        result = upstreamClient->execute(metadata.http_method, "", req);
 
         if result is http:Response {
             return result;

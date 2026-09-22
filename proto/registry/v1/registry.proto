@@ -1,0 +1,22 @@
+syntax = "proto3";
+package sentinel.registry.v1;
+option go_package = "github.com/thisaruRasanjana/Sentinel/registry/pkg/registryv1";
+
+service RegistryService {
+  rpc GetTool(GetToolRequest) returns (GetToolResponse);
+}
+
+message GetToolRequest {
+  string tool_id = 1;
+}
+
+message GetToolResponse {
+  bool found = 1;
+  ToolMetadata metadata = 2;
+}
+
+message ToolMetadata {
+  string upstream_url = 1;
+  string http_method = 2;
+  string required_scope = 3;
+}

@@ -8,12 +8,14 @@ services:
       BAL_CONFIG_DATA: |
         policyUrl="http://policy-engine:9001"
         registryUrl="http://registry:9002"
+        auditUrl="http://audit-sink:9003"
         certFile="./token-issuer/resources/public.crt"
     depends_on:
       - tool-billing
       - tool-inventory
       - policy-engine
       - registry
+      - audit-sink
     volumes:
       - ../../token-issuer/resources:/home/ballerina/token-issuer/resources
 
@@ -54,7 +56,18 @@ services:
     ports:
       - "9002:9002"
 
+  audit-sink:
+    build:
+      context: ../../audit-sink
+    ports:
+      - "9003:9003"
+    volumes:
+      - audit-data:/data
+
   redis:
     image: redis:7.2-alpine
     ports:
       - "6379:6379"
+
+volumes:
+  audit-data:

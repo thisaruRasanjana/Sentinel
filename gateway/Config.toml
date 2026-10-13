@@ -1,4 +1,5 @@
 policyUrl = "http://localhost:9001"
 registryUrl = "http://localhost:9002"
+auditUrl = "http://localhost:9003"
 gatewayPort = 8080
 certFile = "../token-issuer/resources/public.crt"

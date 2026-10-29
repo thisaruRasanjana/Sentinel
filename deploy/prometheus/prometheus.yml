@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'sentinel-policy-engine'
+    static_configs:
+      - targets: ['policy-engine:9011']
+
+  - job_name: 'sentinel-registry'
+    static_configs:
+      - targets: ['registry:9012']
+
+  - job_name: 'sentinel-audit-sink'
+    static_configs:
+      - targets: ['audit-sink:9013']
+

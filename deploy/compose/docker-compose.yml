@@ -45,29 +45,70 @@ services:
     ports:
       - "9001:9001"
       - "9010:9010"
+      - "9011:9011"
     environment:
       - REDIS_ADDR=redis:6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
     depends_on:
       - redis
+      - jaeger
 
   registry:
     build:
       context: ../../registry
     ports:
       - "9002:9002"
+      - "9012:9012"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
+    depends_on:
+      - jaeger
 
   audit-sink:
     build:
       context: ../../audit-sink
     ports:
       - "9003:9003"
+      - "9013:9013"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
     volumes:
       - audit-data:/data
+    depends_on:
+      - jaeger
 
   redis:
     image: redis:7.2-alpine
     ports:
       - "6379:6379"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.65.0
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../../deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+
+  grafana:
+    image: grafana/grafana:12.0.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - ../../deploy/grafana/provisioning:/etc/grafana/provisioning:ro
 
 volumes:
   audit-data:

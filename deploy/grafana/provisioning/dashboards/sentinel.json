@@ -1,0 +1,107 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": { "list": [] },
+  "description": "Sentinel Agent API Governance Platform",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "list" }, "tooltip": { "mode": "single" } },
+      "targets": [
+        {
+          "expr": "rate(sentinel_policy_checks_total[1m])",
+          "legendFormat": "policy checks/s - {{allowed}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Policy Engine: Check Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "list" }, "tooltip": { "mode": "single" } },
+      "targets": [
+        {
+          "expr": "rate(sentinel_registry_lookups_total[1m])",
+          "legendFormat": "registry lookups/s - found={{found}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Registry: Lookup Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "options": { "legend": { "displayMode": "list" }, "tooltip": { "mode": "single" } },
+      "targets": [
+        {
+          "expr": "rate(sentinel_audit_events_total[1m])",
+          "legendFormat": "audit events/s - {{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Audit Sink: Event Rate by Outcome",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "ms" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "options": { "legend": { "displayMode": "list" }, "tooltip": { "mode": "single" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, rate(sentinel_policy_check_latency_ms_bucket[5m]))",
+          "legendFormat": "p99 policy latency",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(sentinel_registry_lookup_latency_ms_bucket[5m]))",
+          "legendFormat": "p99 registry latency",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(sentinel_audit_event_latency_ms_bucket[5m]))",
+          "legendFormat": "p99 audit latency",
+          "refId": "C"
+        }
+      ],
+      "title": "p99 Latency per Service",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["sentinel"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "title": "Sentinel Observability",
+  "uid": "sentinel-main",
+  "version": 1
+}
+

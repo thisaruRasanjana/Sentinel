@@ -8,12 +8,19 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+
+	"github.com/thisaruRasanjana/Sentinel/audit-sink/internal/metrics"
 	pb "github.com/thisaruRasanjana/Sentinel/audit-sink/pkg/auditv1"
 )
 
+var tracer = otel.Tracer("sentinel/audit-sink")
+
 // AuditEntry is the JSON structure written to the log file.
-// It wraps the protobuf AuditEvent fields and adds hash chaining.
 type AuditEntry struct {
 	EventID    string `json:"event_id"`
 	Timestamp  string `json:"timestamp"`
@@ -47,6 +54,21 @@ func NewAuditServer(logPath string) (*AuditServer, error) {
 }
 
 func (s *AuditServer) RecordEvent(ctx context.Context, ev *pb.AuditEvent) (*pb.AuditAck, error) {
+	// Start an OTel span. The parent span is extracted automatically from ctx
+	// by the otelgrpc server interceptor in main.go.
+	ctx, span := tracer.Start(ctx, "AuditServer.RecordEvent")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("audit.event_id", ev.GetEventId()),
+		attribute.String("audit.agent_id", ev.GetAgentId()),
+		attribute.String("audit.tool_id", ev.GetToolId()),
+		attribute.String("audit.outcome", ev.GetOutcome()),
+		attribute.Int("audit.status_code", int(ev.GetStatusCode())),
+	)
+
+	start := time.Now()
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -63,7 +85,6 @@ func (s *AuditServer) RecordEvent(ctx context.Context, ev *pb.AuditEvent) (*pb.A
 		PrevHash:   s.prevHash,
 	}
 
-	// Compute hash over the entry (excluding the Hash field itself)
 	hashInput := fmt.Sprintf("%s|%s|%s|%s|%s|%d|%s|%d|%s|%s",
 		entry.EventID, entry.Timestamp, entry.AgentID, entry.Principal,
 		entry.ToolID, entry.StatusCode, entry.Outcome, entry.LatencyMs,
@@ -73,15 +94,24 @@ func (s *AuditServer) RecordEvent(ctx context.Context, ev *pb.AuditEvent) (*pb.A
 
 	line, err := json.Marshal(entry)
 	if err != nil {
+		span.SetStatus(codes.Error, "marshal failed")
+		metrics.EventsTotal.WithLabelValues("error").Inc()
 		return nil, fmt.Errorf("failed to marshal audit entry: %w", err)
 	}
 
 	if _, err := s.file.Write(append(line, '\n')); err != nil {
+		span.SetStatus(codes.Error, "write failed")
+		metrics.EventsTotal.WithLabelValues("error").Inc()
 		return nil, fmt.Errorf("failed to write audit entry: %w", err)
 	}
 
 	s.prevHash = entry.Hash
 
+	elapsed := float64(time.Since(start).Milliseconds())
+	metrics.EventsTotal.WithLabelValues(ev.GetOutcome()).Inc()
+	metrics.EventLatencyMs.WithLabelValues(ev.GetOutcome()).Observe(elapsed)
+
+	span.SetStatus(codes.Ok, "")
 	return &pb.AuditAck{
 		Accepted:  true,
 		ChainHash: entry.Hash,

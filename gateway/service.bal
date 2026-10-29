@@ -62,6 +62,13 @@ service / on new http:Listener(gatewayPort) {
         // Record start time for latency calculation
         time:Utc startTime = time:utcNow();
         string traceId = uuid:createType1AsString();
+
+        // Extract incoming traceparent or generate one from our traceId
+        string traceparent = buildTraceparent(traceId);
+        string|http:HeaderNotFoundError incomingTrace = req.getHeader("traceparent");
+        if incomingTrace is string {
+            traceparent = incomingTrace;
+        }
         
         // Default identity values for audit (used if auth fails before identity is extracted)
         string auditAgentId = "unknown";
@@ -161,6 +168,7 @@ service / on new http:Listener(gatewayPort) {
         // --- DYNAMIC ROUTING ---
         req.setHeader("X-Agent-Id", identity.agent_id);
         req.setHeader("X-Principal", identity.principal);
+        req.setHeader("traceparent", traceparent);
         
         http:Client|error upstreamClient = clientCache.getClient(metadata.upstream_url);
         if upstreamClient is error {
@@ -175,11 +183,13 @@ service / on new http:Listener(gatewayPort) {
         if result is http:Response {
             int latency = calculateLatencyMs(startTime);
             emitAuditEvent(auditAgentId, auditPrincipal, toolId, result.statusCode, "SUCCESS", latency, traceId);
+            result.setHeader("traceparent", traceparent);
             return result;
         } else {
             http:Response r = createErrorResponse(502, "UPSTREAM_ERROR", "Failed to contact tool service");
             int latency = calculateLatencyMs(startTime);
             emitAuditEvent(auditAgentId, auditPrincipal, toolId, 502, "UPSTREAM_ERROR", latency, traceId);
+            r.setHeader("traceparent", traceparent);
             return r;
         }
     }
@@ -225,4 +235,19 @@ function emitAuditEvent(string agentId, string principal, string toolId,
         // Log but do not fail the request
         io:println("WARN: audit emission failed: " + ack.message());
     }
+}
+
+// Forward W3C traceparent header to downstream HTTP requests.
+// Format: traceparent: 00-<traceId>-<spanId>-01
+// We use traceId as both the traceId and spanId components (simplified).
+// This is sufficient for correlation; not a full OTel implementation.
+function buildTraceparent(string traceId) returns string {
+    // traceId from uuid:createType1AsString() is hyphenated e.g. "01f1c6da-4865-..."
+    // W3C traceparent needs hex without hyphens. We take the raw traceId as a pseudo-hex.
+    // For real OTel, you'd use a proper 32-hex trace-id.
+    string cleanId = re `-`.replaceAll(traceId, "");
+    // Pad or truncate to 32 hex chars for trace-id and 16 for parent-id
+    string traceHex = cleanId.length() >= 32 ? cleanId.substring(0, 32) : cleanId.padEnd(32, "0");
+    string spanHex = cleanId.length() >= 16 ? cleanId.substring(0, 16) : cleanId.padEnd(16, "0");
+    return string `00-${traceHex}-${spanHex}-01`;
 }

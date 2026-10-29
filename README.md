@@ -83,6 +83,20 @@ curl -X POST http://localhost:8080/tools/inventory.check \
   -d '{"sku": "WIDGET-001"}'
 ```
 
+## Observability
+
+After starting the full stack with `docker compose up --build`:
+
+| Tool | URL | Credentials |
+|---|---|---|
+| **Jaeger UI** (traces) | http://localhost:16686 | None |
+| **Prometheus** (metrics) | http://localhost:9090 | None |
+| **Grafana** (dashboard) | http://localhost:3000 | Anonymous |
+
+In Jaeger UI, select service `sentinel-policy-engine`, `sentinel-registry`, or `sentinel-audit-sink` and click **Find Traces** to see spans from recent requests.
+
+In Grafana, the **Sentinel Observability** dashboard is pre-provisioned under the **Sentinel** folder.
+
 ## Project Status & Roadmap
 
 Sentinel is currently under active development. Below is the roadmap of core governance capabilities:
@@ -95,5 +109,5 @@ Sentinel is currently under active development. Below is the roadmap of core gov
 | **Policy Engine & Rate Limiter** | Available | In-memory sharded token bucket with distributed quota tracking |
 | **Tool Registry** | Available | Dynamic tool discovery, method mapping, and scope validation |
 | **Audit Pipeline** | Available | Tamper-evident hash-chained logging of all agent tool invocations |
-| **Distributed Observability** | Planned | OpenTelemetry tracing and latency metrics across tool hops |
+| **Distributed Observability** | Available | OpenTelemetry tracing to Jaeger, Prometheus metrics, Grafana dashboard |
 | **Resilience & Circuit Breaking** | Planned | Fail-fast mechanics, fallback strategies, and timeout guardrails |

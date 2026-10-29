@@ -8,23 +8,23 @@ Sentinel is a governance layer that sits between autonomous AI agents and the en
                         ┌──────────────────┐
    AI agents ─────────► │  Gateway         │  Ballerina
                         │  (edge, :8080)   │
-                        └───┬────┬─────┬───┘
-                            │    │     │
-              gRPC ─────────┘    │     └───────── HTTP ──────┐
-                 │               │                           │
-                 ▼               ▼                           ▼
-        ┌────────────────┐  ┌──────────────┐        ┌────────────────┐
-        │ Policy Engine  │  │  Registry    │        │ Tool Services  │
-        │ Go, :9001      │  │  Go, :9002   │        │ Ballerina      │
-        │ quota + limits │  │  tool defs   │        │ :7001-7003     │
-        └───────┬────────┘  └──────┬───────┘        └────────────────┘
-                │                  │
-                ▼                  ▼
-            ┌───────┐         ┌──────────┐
-            │ Redis │         │ Postgres │
-            └───────┘         └──────────┘
+                        └───┬────┬────┬──┬─┘
+                            │    │    │  │
+              gRPC ─────────┘    │    │  └──── gRPC ────┐
+                 │               │    │                  │
+                 ▼               ▼    │                  ▼
+        ┌────────────────┐  ┌────────────┐      ┌──────────────┐
+        │ Policy Engine  │  │  Registry  │      │  Audit Sink  │
+        │ Go, :9001      │  │  Go, :9002 │      │  Go, :9003   │
+        │ quota + limits │  │  tool defs │      │  hash-chain  │
+        └───────┬────────┘  └────────────┘      └──────┬───────┘
+                │                                       │
+                ▼                                       ▼
+            ┌───────┐                           ┌──────────────┐
+            │ Redis │                           │ audit.jsonl  │
+            └───────┘                           └──────────────┘
 ```
-*Status: Core Gateway routing and tool services are active. Additional governance modules (Policy, Registry, Identity) are in active development.*
+*Status: Core Gateway routing, tool services, Policy Engine, Registry, and Audit Sink are active.*
 
 For detailed architecture decisions, see [docs/architecture.md](docs/architecture.md).
 
@@ -83,6 +83,20 @@ curl -X POST http://localhost:8080/tools/inventory.check \
   -d '{"sku": "WIDGET-001"}'
 ```
 
+## Observability
+
+After starting the full stack with `docker compose up --build`:
+
+| Tool | URL | Credentials |
+|---|---|---|
+| **Jaeger UI** (traces) | http://localhost:16686 | None |
+| **Prometheus** (metrics) | http://localhost:9090 | None |
+| **Grafana** (dashboard) | http://localhost:3000 | Anonymous |
+
+In Jaeger UI, select service `sentinel-policy-engine`, `sentinel-registry`, or `sentinel-audit-sink` and click **Find Traces** to see spans from recent requests.
+
+In Grafana, the **Sentinel Observability** dashboard is pre-provisioned under the **Sentinel** folder.
+
 ## Project Status & Roadmap
 
 Sentinel is currently under active development. Below is the roadmap of core governance capabilities:
@@ -93,7 +107,7 @@ Sentinel is currently under active development. Below is the roadmap of core gov
 | **Tool Backends** | Available | Sample billing and inventory microservices |
 | **Agent Identity & Auth** | Available | JWT verification, agent API key validation, and RBAC |
 | **Policy Engine & Rate Limiter** | Available | In-memory sharded token bucket with distributed quota tracking |
-| **Tool Registry** | Planned | Dynamic tool discovery, method mapping, and schema validation |
-| **Audit Pipeline** | Planned | Tamper-evident logging of all LLM/agent invocations |
-| **Distributed Observability** | Planned | OpenTelemetry tracing and latency metrics across tool hops |
+| **Tool Registry** | Available | Dynamic tool discovery, method mapping, and scope validation |
+| **Audit Pipeline** | Available | Tamper-evident hash-chained logging of all agent tool invocations |
+| **Distributed Observability** | Available | OpenTelemetry tracing to Jaeger, Prometheus metrics, Grafana dashboard |
 | **Resilience & Circuit Breaking** | Planned | Fail-fast mechanics, fallback strategies, and timeout guardrails |

@@ -3,6 +3,11 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
+  - job_name: 'sentinel-gateway'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['gateway:8080']
+
   - job_name: 'sentinel-policy-engine'
     static_configs:
       - targets: ['policy-engine:9011']
@@ -14,4 +19,3 @@ scrape_configs:
   - job_name: 'sentinel-audit-sink'
     static_configs:
       - targets: ['audit-sink:9013']
-

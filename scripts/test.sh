@@ -42,6 +42,27 @@ curl -i -X POST http://localhost:8080/tools/inventory.check \
 
 echo ""
 echo "-------------------------------------"
+echo "Testing Gateway /metrics endpoint"
+echo "-------------------------------------"
+METRICS_RESP=$(curl -s http://localhost:8080/metrics)
+echo "$METRICS_RESP" | grep "sentinel_gateway"
+
+if echo "$METRICS_RESP" | grep -q "sentinel_gateway_requests_total"; then
+    echo "PASS: Metrics body contains sentinel_gateway_requests_total"
+else
+    echo "FAIL: Metrics body missing sentinel_gateway_requests_total"
+    exit 1
+fi
+
+if echo "$METRICS_RESP" | grep -q "sentinel_gateway_circuit_open_total"; then
+    echo "PASS: Metrics body contains sentinel_gateway_circuit_open_total"
+else
+    echo "FAIL: Metrics body missing sentinel_gateway_circuit_open_total"
+    exit 1
+fi
+
+echo ""
+echo "-------------------------------------"
 echo "Verifying audit log"
 echo "-------------------------------------"
 

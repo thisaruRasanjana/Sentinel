@@ -3,3 +3,11 @@ registryUrl = "http://localhost:9002"
 auditUrl = "http://localhost:9003"
 gatewayPort = 8080
 certFile = "../token-issuer/resources/public.crt"
+
+# Resilience configuration
+upstreamTimeoutSeconds = 5.0
+cbResetTimeSeconds = 15.0
+cbFailureThreshold = 0.5
+cbRollingWindowSeconds = 60.0
+cbBucketSizeSeconds = 10.0
+cbRequestVolumeThreshold = 5

@@ -1,96 +1,201 @@
 {
-  "__inputs": [],
-  "__requires": [],
   "annotations": { "list": [] },
-  "description": "Sentinel Agent API Governance Platform",
   "editable": true,
-  "graphTooltip": 1,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
   "id": null,
+  "links": [],
+  "liveNow": false,
   "panels": [
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" },
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false, "axisCenteredZero": false, "axisLabel": "", "axisPlacement": "auto",
+            "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5,
+            "scaleDistribution": { "type": "linear" }, "showPoints": "auto", "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }] },
+          "unit": "reqps"
+        },
         "overrides": []
       },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "id": 1,
-      "options": { "legend": { "displayMode": "list" }, "tooltip": { "mode": "single" } },
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
       "targets": [
-        {
-          "expr": "rate(sentinel_policy_checks_total[1m])",
-          "legendFormat": "policy checks/s - {{allowed}}",
-          "refId": "A"
-        }
+        { "expr": "rate(sentinel_gateway_requests_total[5m])", "legendFormat": "requests/s", "refId": "A" },
+        { "expr": "rate(sentinel_gateway_success_total[5m])", "legendFormat": "success/s", "refId": "B" },
+        { "expr": "rate(sentinel_gateway_errors_total[5m])", "legendFormat": "errors/s", "refId": "C" }
       ],
-      "title": "Policy Engine: Check Rate",
+      "title": "Gateway Request Rate",
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" },
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false, "axisCenteredZero": false, "axisLabel": "", "axisPlacement": "auto",
+            "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5,
+            "scaleDistribution": { "type": "linear" }, "showPoints": "auto", "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }] },
+          "unit": "short"
+        },
         "overrides": []
       },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "id": 2,
-      "options": { "legend": { "displayMode": "list" }, "tooltip": { "mode": "single" } },
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
       "targets": [
-        {
-          "expr": "rate(sentinel_registry_lookups_total[1m])",
-          "legendFormat": "registry lookups/s - found={{found}}",
-          "refId": "A"
-        }
+        { "expr": "rate(sentinel_gateway_circuit_open_total[5m])", "legendFormat": "circuit_open/s", "refId": "A" },
+        { "expr": "rate(sentinel_gateway_timeouts_total[5m])", "legendFormat": "timeouts/s", "refId": "B" },
+        { "expr": "rate(sentinel_gateway_upstream_errors_total[5m])", "legendFormat": "upstream_errors/s", "refId": "C" }
       ],
-      "title": "Registry: Lookup Rate",
+      "title": "Gateway Resilience Events",
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" },
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false, "axisCenteredZero": false, "axisLabel": "", "axisPlacement": "auto",
+            "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5,
+            "scaleDistribution": { "type": "linear" }, "showPoints": "auto", "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }] },
+          "unit": "reqps"
+        },
         "overrides": []
       },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
       "id": 3,
-      "options": { "legend": { "displayMode": "list" }, "tooltip": { "mode": "single" } },
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
       "targets": [
-        {
-          "expr": "rate(sentinel_audit_events_total[1m])",
-          "legendFormat": "audit events/s - {{outcome}}",
-          "refId": "A"
-        }
+        { "expr": "rate(sentinel_policy_checks_total[5m])", "legendFormat": "{{allowed}}", "refId": "A" }
       ],
-      "title": "Audit Sink: Event Rate by Outcome",
+      "title": "Policy Checks/sec",
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "unit": "ms" },
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false, "axisCenteredZero": false, "axisLabel": "", "axisPlacement": "auto",
+            "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5,
+            "scaleDistribution": { "type": "linear" }, "showPoints": "auto", "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }] },
+          "unit": "reqps"
+        },
         "overrides": []
       },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
       "id": 4,
-      "options": { "legend": { "displayMode": "list" }, "tooltip": { "mode": "single" } },
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
       "targets": [
-        {
-          "expr": "histogram_quantile(0.99, rate(sentinel_policy_check_latency_ms_bucket[5m]))",
-          "legendFormat": "p99 policy latency",
-          "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.99, rate(sentinel_registry_lookup_latency_ms_bucket[5m]))",
-          "legendFormat": "p99 registry latency",
-          "refId": "B"
-        },
-        {
-          "expr": "histogram_quantile(0.99, rate(sentinel_audit_event_latency_ms_bucket[5m]))",
-          "legendFormat": "p99 audit latency",
-          "refId": "C"
-        }
+        { "expr": "rate(sentinel_registry_lookups_total[5m])", "legendFormat": "{{found}}", "refId": "A" }
       ],
-      "title": "p99 Latency per Service",
+      "title": "Registry Lookups/sec",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false, "axisCenteredZero": false, "axisLabel": "", "axisPlacement": "auto",
+            "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5,
+            "scaleDistribution": { "type": "linear" }, "showPoints": "auto", "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }] },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "id": 5,
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        { "expr": "rate(sentinel_audit_events_total[5m])", "legendFormat": "{{outcome}}", "refId": "A" }
+      ],
+      "title": "Audit Events/sec",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false, "axisCenteredZero": false, "axisLabel": "", "axisPlacement": "auto",
+            "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5,
+            "scaleDistribution": { "type": "linear" }, "showPoints": "auto", "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }] },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "id": 6,
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, rate(sentinel_policy_check_latency_ms_bucket[5m]))", "legendFormat": "p95", "refId": "A" },
+        { "expr": "histogram_quantile(0.50, rate(sentinel_policy_check_latency_ms_bucket[5m]))", "legendFormat": "p50", "refId": "B" }
+      ],
+      "title": "Policy Check Latency",
       "type": "timeseries"
     }
   ],
@@ -99,9 +204,7 @@
   "tags": ["sentinel"],
   "templating": { "list": [] },
   "time": { "from": "now-15m", "to": "now" },
-  "timepicker": {},
   "title": "Sentinel Observability",
   "uid": "sentinel-main",
-  "version": 1
+  "version": 2
 }
-

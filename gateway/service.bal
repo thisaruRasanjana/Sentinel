@@ -12,22 +12,8 @@ final PolicyServiceClient policyClient = check new (policyUrl);
 final RegistryServiceClient registryClient = check new (registryUrl);
 final AuditServiceClient auditClient = check new (auditUrl);
 
-// Cache http clients to upstream destinations
-isolated class ClientCache {
-    private map<http:Client> clients = {};
-
-    isolated function getClient(string url) returns http:Client|error {
-        lock {
-            if self.clients.hasKey(url) {
-                return self.clients.get(url);
-            }
-            http:Client newClient = check new (url);
-            self.clients[url] = newClient;
-            return newClient;
-        }
-    }
-}
-final ClientCache clientCache = new ClientCache();
+// Use the resilient client cache with circuit breaker + timeout (from circuit_breaker.bal)
+final ResilientClientCache resilientClientCache = new ResilientClientCache();
 
 isolated class ToolCache {
     private map<ToolMetadata> cache = {};
@@ -58,7 +44,19 @@ service / on new http:Listener(gatewayPort) {
         };
     }
 
+    // Prometheus metrics endpoint
+    resource function get metrics() returns http:Response {
+        http:Response res = new;
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
+        res.setTextPayload(gatewayMetrics.toPrometheusText());
+        return res;
+    }
+
     resource function post tools/[string toolId](http:Request req) returns http:Response {
+        // Count every incoming request
+        gatewayMetrics.incRequests();
+
         // Record start time for latency calculation
         time:Utc startTime = time:utcNow();
         string traceId = uuid:createType1AsString();
@@ -80,6 +78,8 @@ service / on new http:Listener(gatewayPort) {
             http:Response r = createErrorResponse(401, "UNAUTHORIZED", "Missing Authorization header");
             int latency = calculateLatencyMs(startTime);
             emitAuditEvent(auditAgentId, auditPrincipal, toolId, 401, "AUTH_FAILURE", latency, traceId);
+            gatewayMetrics.incErrors();
+            gatewayMetrics.incAuthFailures();
             return r;
         }
 
@@ -87,6 +87,8 @@ service / on new http:Listener(gatewayPort) {
             http:Response r = createErrorResponse(401, "UNAUTHORIZED", "Invalid Authorization header format");
             int latency = calculateLatencyMs(startTime);
             emitAuditEvent(auditAgentId, auditPrincipal, toolId, 401, "AUTH_FAILURE", latency, traceId);
+            gatewayMetrics.incErrors();
+            gatewayMetrics.incAuthFailures();
             return r;
         }
 
@@ -97,6 +99,8 @@ service / on new http:Listener(gatewayPort) {
             http:Response r = createErrorResponse(401, "UNAUTHORIZED", "Invalid or expired token");
             int latency = calculateLatencyMs(startTime);
             emitAuditEvent(auditAgentId, auditPrincipal, toolId, 401, "AUTH_FAILURE", latency, traceId);
+            gatewayMetrics.incErrors();
+            gatewayMetrics.incAuthFailures();
             return r;
         }
         
@@ -116,6 +120,8 @@ service / on new http:Listener(gatewayPort) {
                 http:Response r = createErrorResponse(500, "REGISTRY_ERROR", "Failed to contact tool registry");
                 int latency = calculateLatencyMs(startTime);
                 emitAuditEvent(auditAgentId, auditPrincipal, toolId, 500, "REGISTRY_ERROR", latency, traceId);
+                gatewayMetrics.incErrors();
+                gatewayMetrics.incRegistryErrors();
                 return r;
             }
             
@@ -123,6 +129,8 @@ service / on new http:Listener(gatewayPort) {
                 http:Response r = createErrorResponse(404, "TOOL_NOT_FOUND", "Unknown tool ID: " + toolId);
                 int latency = calculateLatencyMs(startTime);
                 emitAuditEvent(auditAgentId, auditPrincipal, toolId, 404, "REGISTRY_ERROR", latency, traceId);
+                gatewayMetrics.incErrors();
+                gatewayMetrics.incRegistryErrors();
                 return r;
             }
             
@@ -131,6 +139,8 @@ service / on new http:Listener(gatewayPort) {
                 http:Response r = createErrorResponse(500, "REGISTRY_ERROR", "Registry returned found but missing metadata");
                 int latency = calculateLatencyMs(startTime);
                 emitAuditEvent(auditAgentId, auditPrincipal, toolId, 500, "REGISTRY_ERROR", latency, traceId);
+                gatewayMetrics.incErrors();
+                gatewayMetrics.incRegistryErrors();
                 return r;
             }
             metadata = regMeta;
@@ -144,6 +154,8 @@ service / on new http:Listener(gatewayPort) {
             http:Response r = createErrorResponse(403, "FORBIDDEN", "Insufficient scopes. Required: " + metadata.required_scope);
             int latency = calculateLatencyMs(startTime);
             emitAuditEvent(auditAgentId, auditPrincipal, toolId, 403, "AUTH_FAILURE", latency, traceId);
+            gatewayMetrics.incErrors();
+            gatewayMetrics.incAuthFailures();
             return r;
         }
 
@@ -155,26 +167,32 @@ service / on new http:Listener(gatewayPort) {
             http:Response r = createErrorResponse(503, "SERVICE_UNAVAILABLE", "Policy engine unreachable");
             int latency = calculateLatencyMs(startTime);
             emitAuditEvent(auditAgentId, auditPrincipal, toolId, 503, "POLICY_DENIED", latency, traceId);
+            gatewayMetrics.incErrors();
+            gatewayMetrics.incPolicyDenied();
             return r;
         } else {
             if !policyRes.allowed {
                 http:Response r = createErrorResponse(429, "QUOTA_EXCEEDED", "Agent quota exhausted for tool " + toolId, policyRes.retry_after_ms);
                 int latency = calculateLatencyMs(startTime);
                 emitAuditEvent(auditAgentId, auditPrincipal, toolId, 429, "POLICY_DENIED", latency, traceId);
+                gatewayMetrics.incErrors();
+                gatewayMetrics.incPolicyDenied();
                 return r;
             }
         }
 
-        // --- DYNAMIC ROUTING ---
+        // --- DYNAMIC ROUTING (with circuit breaker + timeout) ---
         req.setHeader("X-Agent-Id", identity.agent_id);
         req.setHeader("X-Principal", identity.principal);
         req.setHeader("traceparent", traceparent);
         
-        http:Client|error upstreamClient = clientCache.getClient(metadata.upstream_url);
+        http:Client|error upstreamClient = resilientClientCache.getClient(metadata.upstream_url);
         if upstreamClient is error {
             http:Response r = createErrorResponse(500, "INTERNAL_ERROR", "Failed to initialize upstream client");
             int latency = calculateLatencyMs(startTime);
             emitAuditEvent(auditAgentId, auditPrincipal, toolId, 500, "UPSTREAM_ERROR", latency, traceId);
+            gatewayMetrics.incErrors();
+            gatewayMetrics.incUpstreamErrors();
             return r;
         }
         
@@ -184,12 +202,36 @@ service / on new http:Listener(gatewayPort) {
             int latency = calculateLatencyMs(startTime);
             emitAuditEvent(auditAgentId, auditPrincipal, toolId, result.statusCode, "SUCCESS", latency, traceId);
             result.setHeader("traceparent", traceparent);
+            gatewayMetrics.incSuccess();
             return result;
         } else {
-            http:Response r = createErrorResponse(502, "UPSTREAM_ERROR", "Failed to contact tool service");
+            // Classify the upstream error
+            int errorCode = 502;
+            string errorType = "UPSTREAM_ERROR";
+            string errorMessage = "Failed to contact tool service";
+            string auditOutcome = "UPSTREAM_ERROR";
+
+            if isCircuitBreakerOpen(result) {
+                errorCode = 503;
+                errorType = "CIRCUIT_OPEN";
+                errorMessage = "Circuit breaker is open for upstream: " + metadata.upstream_url;
+                auditOutcome = "CIRCUIT_OPEN";
+                gatewayMetrics.incCircuitOpen();
+            } else if isTimeoutError(result) {
+                errorCode = 504;
+                errorType = "UPSTREAM_TIMEOUT";
+                errorMessage = "Upstream request timed out";
+                auditOutcome = "UPSTREAM_TIMEOUT";
+                gatewayMetrics.incTimeouts();
+            } else {
+                gatewayMetrics.incUpstreamErrors();
+            }
+
+            http:Response r = createErrorResponse(errorCode, errorType, errorMessage);
             int latency = calculateLatencyMs(startTime);
-            emitAuditEvent(auditAgentId, auditPrincipal, toolId, 502, "UPSTREAM_ERROR", latency, traceId);
+            emitAuditEvent(auditAgentId, auditPrincipal, toolId, errorCode, auditOutcome, latency, traceId);
             r.setHeader("traceparent", traceparent);
+            gatewayMetrics.incErrors();
             return r;
         }
     }

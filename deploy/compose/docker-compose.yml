@@ -6,10 +6,17 @@ services:
       - "8080:8080"
     environment:
       BAL_CONFIG_DATA: |
-        policyUrl="http://policy-engine:9001"
-        registryUrl="http://registry:9002"
-        auditUrl="http://audit-sink:9003"
-        certFile="./token-issuer/resources/public.crt"
+        policyUrl = "http://policy-engine:9001"
+        registryUrl = "http://registry:9002"
+        auditUrl = "http://audit-sink:9003"
+        certFile = "./token-issuer/resources/public.crt"
+        gatewayPort = 8080
+        upstreamTimeoutSeconds = 5.0
+        cbResetTimeSeconds = 15.0
+        cbFailureThreshold = 0.5
+        cbRollingWindowSeconds = 60.0
+        cbBucketSizeSeconds = 10.0
+        cbRequestVolumeThreshold = 5
     depends_on:
       - tool-billing
       - tool-inventory

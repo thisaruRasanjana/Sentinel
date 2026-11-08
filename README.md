@@ -110,4 +110,4 @@ Sentinel is currently under active development. Below is the roadmap of core gov
 | **Tool Registry** | Available | Dynamic tool discovery, method mapping, and scope validation |
 | **Audit Pipeline** | Available | Tamper-evident hash-chained logging of all agent tool invocations |
 | **Distributed Observability** | Available | OpenTelemetry tracing to Jaeger, Prometheus metrics, Grafana dashboard |
-| **Resilience & Circuit Breaking** | Planned | Fail-fast mechanics, fallback strategies, and timeout guardrails |
+| **Resilience & Circuit Breaking** | Available | Circuit breaker, per-upstream timeouts, and gateway metrics |

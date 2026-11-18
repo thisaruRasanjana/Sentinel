@@ -18,16 +18,18 @@ type RedisStore struct {
 }
 
 func NewRedisStore(addr string, l *limiter.ShardedLimiter) *RedisStore {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
-
-	return &RedisStore{
-		client:  rdb,
-		limiter: l,
+	var opt *redis.Options
+	if strings.HasPrefix(addr, "redis://") || strings.HasPrefix(addr, "rediss://") {
+		var err error
+		opt, err = redis.ParseURL(addr)
+		if err != nil {
+			opt = &redis.Options{Addr: addr}
+		}
+	} else {
+		opt = &redis.Options{Addr: addr, Password: "", DB: 0}
 	}
+	rdb := redis.NewClient(opt)
+	return &RedisStore{client: rdb, limiter: l}
 }
 
 // StartWriteBehind runs a background loop to persist bucket state to Redis.

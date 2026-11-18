@@ -28,6 +28,52 @@ Sentinel is a governance layer that sits between autonomous AI agents and the en
 
 For detailed architecture decisions, see [docs/architecture.md](docs/architecture.md).
 
+## Live Cloud Deployment & Demo
+
+All 7 microservices are deployed on **Azure Container Apps** (Workload Profiles environment, `malaysiawest` region) with the following production characteristics:
+
+| Feature | Detail |
+|---|---|
+| **Services** | `gateway`, `token-issuer`, `policy-engine`, `registry`, `audit-sink`, `tool-billing`, `tool-inventory` |
+| **Scaling** | Scale-to-zero (`min-replicas: 0`) — first request after idle wakes containers in ~10–20s |
+| **Service mesh** | Internal HTTP/2 / gRPC service-to-service communication within the Container Apps environment |
+| **Quota store** | Upstash Redis (`ap-south-1`, TLS `rediss://`) for write-behind distributed quota persistence |
+| **Registry** | Azure Container Registry (`malaysiawest`) — all images tagged `:v1`, built for `linux/amd64` |
+
+### Live Endpoints
+
+| Service | URL |
+|---|---|
+| **Gateway** (public) | `https://gateway.yellowsand-62e3a857.malaysiawest.azurecontainerapps.io` |
+| **Token Issuer** (public) | `https://token-issuer.yellowsand-62e3a857.malaysiawest.azurecontainerapps.io` |
+
+### Quickstart Demo
+
+> **Note:** The first request after a period of inactivity may take **10–20 seconds** while containers wake from zero replicas. Subsequent requests are fast.
+
+**1. Health check**
+```bash
+curl https://gateway.yellowsand-62e3a857.malaysiawest.azurecontainerapps.io/health
+```
+
+**2. Mint an agent JWT**
+```bash
+TOKEN=$(curl -s -X POST https://token-issuer.yellowsand-62e3a857.malaysiawest.azurecontainerapps.io/tokens \
+  -H "Content-Type: application/json" \
+  -d '{"agent_id":"agent-1","principal":"agent-demo","scopes":["inventory:read","billing:write"]}' \
+  | jq -r '.token')
+```
+
+**3. Call a governed tool through the gateway**
+```bash
+curl -X POST https://gateway.yellowsand-62e3a857.malaysiawest.azurecontainerapps.io/tools/inventory.check \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"sku":"WIDGET-001"}'
+```
+
+The gateway enforces JWT verification, scope-based RBAC, rate limiting (via policy-engine + Upstash Redis), schema validation, and tamper-evident audit logging on every request.
+
 ## Quick Start
 
 ### Option A — Local Development (Fastest)

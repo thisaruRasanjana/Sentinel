@@ -1,5 +1,5 @@
 # Ballerina build artifacts
-target/
+target/cache/
 Dependencies.toml
 .ballerina/
 
